@@ -30,7 +30,7 @@ logging.basicConfig(
     )
 
 # # We can change the logging level. Use logging.DEBUG if necesarry
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 
