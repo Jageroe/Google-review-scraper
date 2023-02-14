@@ -2,19 +2,18 @@ import time
 import random
 import re
 import os
-import pandas as pd
 import logging
+import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException
 
 DRIVER_PATH = r'/home/oli/Projects/Google-review-scraper/chromedriver_linux64/chromedriver'
 SAVING_PATH = r'/home/oli/Projects/Google-review-scraper/data'
 
-# with this consant, you can give the URLs of the google map objects to be scraped
+# with this constant, you can give the URLs of the google map objects which will be scraped.
 OBJECT_URLS = [
         'https://www.google.com/maps/place/GoGo+hami+%C3%9Ajpest-k%C3%B6zpont/@47.6741137,18.6786254,11z/data=!4m7!3m6!1s0x4741da37020258d1:0xcac69f37622f45d0!8m2!3d47.5611747!4d19.0903816!15sCghnb2dvaGFtaVoKIghnb2dvaGFtaZIBCnJlc3RhdXJhbnTgAQA!16s%2Fg%2F11bwql9cb2?hl=hu&coh=164777&entry=tt&shorturl=1',
         'https://www.google.com/maps/place/Tesco/@47.7160014,18.7379746,16.04z/data=!4m6!3m5!1s0x476a645d4983b2df:0xf8f1eb25f3813b5b!8m2!3d47.7131753!4d18.7406381!16s%2Fg%2F1hg50d6_k?hl=hu',
@@ -22,14 +21,14 @@ OBJECT_URLS = [
     ]
 
 
-# Setting up the logging object
+# setting up the logging object
 logger = logging.getLogger('main')
 logging.basicConfig(
-    format= '[%(asctime)s] [%(levelname)s] - %(message)s', 
+    format= '[%(asctime)s] [%(levelname)s] - %(message)s',
     datefmt='%H:%M:%S'
     )
 
-# # We can change the logging level. Use logging.DEBUG if necesarry
+# we can change the logging level. Use logging.DEBUG if necesarry
 logger.setLevel(logging.INFO)
 
 
@@ -39,7 +38,8 @@ def scrape_a_store(object_url: str) -> tuple :
     this function will:
     - open the input URL (of a google maps object like stores, hotels, restaurants etc...)
     - accept the cookies
-    - get some basic information of the given object (name, address, overall rating, and the number of reviews)
+    - get some basic information of the given object (name, address, overall rating, 
+      and the number of reviews)
     - scroll down to the bottom of the page in order to load every reviews in the html source code
     - scrape the div that contains the reviews
 
@@ -50,57 +50,85 @@ def scrape_a_store(object_url: str) -> tuple :
         store_main_data: a dictionary containing the basic information of the google map object 
                       (name, address, overall rating, and the number of reviews)
 
-        reviews_source: a bs4 object containing the html source code of the div that contains all the reviews
+        reviews_source: a bs4 object containing the html source code of the div 
+                        that contains all the reviews
     
     """
 
-    # setting the chrome driver for selenium 
+    # setting the chrome driver for selenium
     driver = webdriver.Chrome(service= Service(DRIVER_PATH))
 
     # opening the given URL
     driver.get(object_url)
     logger.debug("The given URL has been loaded")
 
-    # Accepting the cookies
+    # accepting the cookies
     driver.find_element(By.CLASS_NAME,"lssxud").click()
-    logger.debug("Cookies have been accepted") 
+    logger.debug("Cookies have been accepted")
 
 
     time.sleep(random.uniform(4,6))
 
     # I use CSS selectors where I can, because its more reliable than XPATH
-    object_name = driver.find_element(By.CSS_SELECTOR,'h1.DUwDvf.fontHeadlineLarge').text
-    logger.debug(f'object_name OK : {object_name}') 
+    object_name = driver.find_element(
+        By.CSS_SELECTOR,
+        'h1.DUwDvf.fontHeadlineLarge'
+    ).text
+    logger.debug(f'object_name OK : {object_name}')
 
-    object_address = driver.find_element(By.CSS_SELECTOR,'div.Io6YTe.fontBodyMedium').text
-    logger.debug(f'object_address OK : {object_address}') 
-    
-    
-    # for some reason google full randomly loads sometimes with a slightly different page structure
-    # to be able to handle this, I created an except branch that scrapes the right objects in that scenario
+    object_address = driver.find_element(
+        By.CSS_SELECTOR,
+        'div.Io6YTe.fontBodyMedium'
+    ).text
+    logger.debug(f'object_address OK : {object_address}')
+
+
+    # for some reason sometimes google full randomly loads the page
+    # with a slightly different page structure. to be able to handle this,
+    # I created an except branch that scrapes the right objects in that scenario
     try:
-        overall_rating = driver.find_element(By.CSS_SELECTOR,'div.F7nice.mmu3tf').text.split()[0]
+
+        overall_rating = driver.find_element(
+            By.CSS_SELECTOR,
+            'div.F7nice.mmu3tf'
+        ).text.split()[0]
+
         logger.debug(f'overall_rating OK : {overall_rating}')
 
-        review_number = driver.find_element(By.CSS_SELECTOR,'div.F7nice.mmu3tf').text.replace(' ','')
+        review_number = driver.find_element(
+            By.CSS_SELECTOR,
+            'div.F7nice.mmu3tf'
+        ).text.replace(' ','')
+
         review_number = int(re.compile(r'\d+').findall(review_number)[-1])
         logger.debug(f'review_number OK : {review_number}')
 
         # click to load further reviews
-        driver.find_element(By.XPATH,'//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[1]/div[1]/div[2]/div/div[1]/div[2]/span[2]/span[1]/span').click() 
+        driver.find_element(
+            By.XPATH,
+            '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[1]/div[1]/div[2]/div/div[1]/div[2]/span[2]/span[1]/span'
+        ).click()
+
         logger.debug('clicked to load further reviews')
 
         time.sleep(random.uniform(0.1, 0.5))
 
         # find scroll layout
-        scrollable_div = driver.find_element(By.XPATH,'//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]')
-        logger.debug('Scroll div OK')
-                                             
-    except NoSuchElementException:
-        logger.debug('============= Except branch!!! ==========') 
+        scrollable_div = driver.find_element(
+            By.XPATH,
+            '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]'
+        )
 
-        
-        div_num_rating = driver.find_element(By.CSS_SELECTOR,'div.F7nice').text
+        logger.debug('Scroll div OK')
+     
+    except NoSuchElementException:
+
+        logger.debug('============= Except branch!!! ==========')
+
+        div_num_rating = driver.find_element(
+            By.CSS_SELECTOR,
+            'div.F7nice'
+        ).text
         overall_rating = div_num_rating.split()[0]
         logger.debug(f'overall_rating OK : {overall_rating}')
 
@@ -108,20 +136,30 @@ def scrape_a_store(object_url: str) -> tuple :
         logger.debug(f'review_number OK : {review_number}')
 
         # click on the review tab
-        driver.find_element(By.XPATH,'//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[3]/div/div/button[2]/div[2]/div[2]').click()
+        driver.find_element(
+            By.XPATH,
+            '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[3]/div/div/button[2]/div[2]/div[2]'
+        ).click()
         logger.debug('clicked to load further reviews')
 
         time.sleep(random.uniform(0.1, 0.5))
 
         # find scroll layout
-        scrollable_div = driver.find_element(By.XPATH,'//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[3]')
+        scrollable_div = driver.find_element(
+            By.XPATH,
+            '//*[@id="QA0Szd"]/div/div/div[1]/div[2]/div/div[1]/div/div/div[3]'
+        )
         logger.debug('Scroll div OK')
 
     time.sleep(random.uniform(2,4))
+
     # scroll as many times as necessary to load all reviews
     for _ in range(0,(round(review_number/5 - 1)+1)):
-            driver.execute_script('arguments[0].scrollTop = arguments[0].scrollHeight', scrollable_div)
-            time.sleep(random.uniform(1, 2))
+        driver.execute_script(
+            'arguments[0].scrollTop = arguments[0].scrollHeight',
+            scrollable_div
+        )
+        time.sleep(random.uniform(1, 2))
 
     # parse the html with a bs object
     response = BeautifulSoup(driver.page_source, 'html.parser')
@@ -147,25 +185,24 @@ def extraxt_reviews(reviews_source: list) -> list:
     r"""
     This function processes the input html code and returns a list 
     containing the reviews.
-    
+
     """
 
-    
     review_list = []
 
     logger.debug('Starting iterate trough the reviews...')
     for review in reviews_source:
 
+        # extract the relevant informations
         user = review.find('div', class_= 'd4r55').text.strip()
         date = review.find('span', class_= 'rsqaWe').text.strip()
         rate_source = str(review.find('span', class_= 'kvMYJc'))
         regex_find_rate = re.compile(r'\d.+csillag')
         rate = regex_find_rate.findall(rate_source)[0].split()[0]
-  
-        # Itt nem biztos, hogy betölti az egészet
         review_text = review.find('span', class_= 'wiI7pd').text.strip()
         reply_source = review.find('div', class_= 'CDe7pd')
-        reply = reply_source.text if reply_source else '-' 
+        reply = reply_source.text if reply_source else '-'
+
 
         review_list.append({'name': user,
                             'date': date,
@@ -186,7 +223,6 @@ def main():
         try:
             time.sleep(random.uniform(3,10))
             
-
             store_main_data, reviews_source = scrape_a_store(url)
             scraped_data.append(store_main_data)
 
@@ -213,8 +249,8 @@ def main():
 
     # reading the dict with pandas
     result_df = pd.json_normalize(
-                scraped_data, 
-                record_path = ['reviews'], 
+                scraped_data,
+                record_path = ['reviews'],
                 errors='ignore',
                 meta=['object_name', 'object_address', 'overall_rating', 'cnt_reviews', 'object_url']
                 )
@@ -234,7 +270,7 @@ def main():
     )
 
     logger.info(f'Successfully exported the result file in the following folder: {os.path.join(SAVING_PATH,"scrape_result.xlsx")}')
-        
+
 
 if __name__ == '__main__':
     main()

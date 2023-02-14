@@ -19,7 +19,7 @@ This is my simple python script for downloading reviews from google map objects.
 
 <table border=1 cellpadding=10><tr><td>
 
-####  NOTICE 
+####  NOTICE !
 
 ---
 
