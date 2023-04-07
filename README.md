@@ -29,5 +29,5 @@ This is a simple Python script that downloads reviews from Google Maps objects. 
 
 </td></tr></table>
 
-The script was tested on February 12th, 2023, and everything worked fine.
+The script was tested on April 4th, 2023, and everything worked fine.
 
